@@ -1,0 +1,32 @@
+# tiers: which document tiers the role may read.
+# tables: which tables (and columns) the role may query. "all" = every column.
+roles:
+  support_analyst:
+    description: Handles customer tickets and complaint analysis.
+    tiers: [general, support]
+    tables:
+      products: {deny_columns: [unit_cost]}
+      orders: {deny_columns: [unit_price]}
+      complaints: all
+      complaints_monthly: all
+  quality_engineer:
+    description: Investigates defects and supplier issues.
+    tiers: [general, support, quality]
+    tables:
+      products: {deny_columns: [unit_cost]}
+      orders: {deny_columns: [unit_price]}
+      complaints: all
+      complaints_monthly: all
+      production_batches: all
+  finance_manager:
+    description: Owns revenue, refunds and margin reporting.
+    tiers: [general, finance]
+    tables:
+      products: all
+      orders: all
+      complaints_monthly: all
+      revenue_monthly: all
+  executive:
+    description: Full visibility across all tiers and tables.
+    tiers: [general, support, quality, finance]
+    tables: "*"

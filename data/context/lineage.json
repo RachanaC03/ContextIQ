@@ -1,0 +1,10 @@
+{
+  "edges": [
+    {"upstream": "orders", "downstream": "complaints", "note": "each complaint references an order"},
+    {"upstream": "production_batches", "downstream": "complaints", "note": "each complaint is traced to a batch"},
+    {"upstream": "complaints", "downstream": "complaints_monthly", "note": "monthly complaint counts"},
+    {"upstream": "orders", "downstream": "complaints_monthly", "note": "monthly order counts (denominator)"},
+    {"upstream": "orders", "downstream": "revenue_monthly", "note": "gross revenue"},
+    {"upstream": "complaints", "downstream": "revenue_monthly", "note": "refunds for severity 2+ complaints"}
+  ]
+}

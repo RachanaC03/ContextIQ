@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Generated project data
+data/generated/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Vector database
+chroma/

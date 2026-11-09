@@ -1,0 +1,41 @@
+terms:
+  customer_complaints:
+    definition: >-
+      A customer-reported product or delivery problem, logged as a complaint record.
+      Use complaints_monthly for monthly counts per product.
+    synonyms: [customer complaints, customer complaint, complaints, complaint, complaint volume, complained]
+    defines: complaints_monthly
+  complaint_rate:
+    definition: >-
+      Complaints divided by orders placed in the same month, as a percentage
+      (complaint_rate_pct in complaints_monthly).
+    synonyms: [complaint rate, complaint rates, rate of complaints]
+    defines: complaints_monthly
+  revenue:
+    definition: Gross revenue less refunds, reported monthly per product in revenue_monthly.
+    synonyms: [revenue, sales, net revenue, gross revenue, refund, refunds, margin, margins]
+    defines: revenue_monthly
+  order_volume:
+    definition: Number of customer order lines, stored in orders.
+    synonyms: [orders, order volume, units sold]
+    defines: orders
+  product_quality:
+    definition: >-
+      Defects and their origin. production_batches records which supplier built each batch,
+      which lets complaints be traced to a batch.
+    synonyms: [defect, defects, defective, faulty, quality, batch, batches, supplier, root cause, heating element]
+    defines: production_batches
+  legacy_complaint_stats:
+    definition: Deprecated complaints-per-1000-units metric. Superseded by complaint_rate.
+    synonyms: [complaints per 1000, legacy complaint stats, complaint stats]
+    defines: legacy_complaint_stats
+
+products:
+  P-101: {name: Toastella 2-Slice Toaster, aliases: [toastella, toaster]}
+  P-102: {name: BlendMate 600 Blender, aliases: [blendmate, blender]}
+  P-103: {name: KettleOne Electric Kettle, aliases: [kettleone, kettle]}
+  P-104: {name: AeroBrew Pro Coffee Maker, aliases: [aerobrew, aerobrew pro, coffee maker]}
+  P-105: {name: CrispAir Mini Fryer, aliases: [crispair, air fryer, fryer]}
+  P-106: {name: WhiskWiz Hand Mixer, aliases: [whiskwiz, hand mixer, mixer]}
+  P-107: {name: Robo Vac R2, aliases: [robo vac, robot vacuum, vacuum]}
+  P-108: {name: PureMist Humidifier, aliases: [puremist, humidifier]}

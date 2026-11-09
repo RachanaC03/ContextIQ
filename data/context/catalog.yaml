@@ -1,0 +1,116 @@
+tiers: [general, support, quality, finance]
+
+tables:
+  products:
+    description: Product master data for the 8 Hearthline small appliances.
+    owner: Product Management
+    columns:
+      product_id: {type: TEXT, description: "Unique product code, for example P-104."}
+      name: {type: TEXT, description: "Marketing name of the product."}
+      category: {type: TEXT, description: "Product family (Kitchen or Home care)."}
+      list_price: {type: REAL, description: "Public list price in USD."}
+      unit_cost: {type: REAL, description: "Cost of goods per unit in USD.", sensitivity: finance}
+
+  orders:
+    description: One row per customer order line, January to October 2026.
+    owner: Sales Operations
+    columns:
+      order_id: {type: TEXT, description: "Unique order identifier."}
+      customer_id: {type: TEXT, description: "Pseudonymous customer identifier."}
+      product_id: {type: TEXT, description: "Product ordered (products.product_id)."}
+      batch_id: {type: TEXT, description: "Production batch the shipped unit came from."}
+      order_date: {type: TEXT, description: "Order date, ISO format."}
+      quantity: {type: INTEGER, description: "Units ordered."}
+      unit_price: {type: REAL, description: "Price actually paid per unit in USD.", sensitivity: finance}
+      channel: {type: TEXT, description: "web, retail or marketplace."}
+
+  complaints:
+    description: One row per customer complaint, linked to the order and production batch.
+    owner: Customer Support
+    columns:
+      complaint_id: {type: TEXT, description: "Unique complaint identifier."}
+      order_id: {type: TEXT, description: "Order the complaint is about (orders.order_id)."}
+      product_id: {type: TEXT, description: "Product the complaint is about."}
+      batch_id: {type: TEXT, description: "Production batch of the complained-about unit."}
+      complaint_date: {type: TEXT, description: "Date the complaint was logged, ISO format."}
+      category: {type: TEXT, description: "Complaint category, for example heating_element_failure or delivery_delay."}
+      severity: {type: INTEGER, description: "1 (minor) to 3 (severe)."}
+      description: {type: TEXT, description: "Customer free-text description."}
+
+  complaints_monthly:
+    description: >-
+      Authoritative monthly complaint metric. complaint_rate_pct is complaints divided by orders
+      placed in the same month, as a percentage.
+    owner: Customer Support Analytics
+    columns:
+      month: {type: TEXT, description: "Calendar month, YYYY-MM."}
+      product_id: {type: TEXT, description: "Product code."}
+      orders: {type: INTEGER, description: "Orders placed in the month."}
+      complaints: {type: INTEGER, description: "Complaints logged in the month."}
+      complaint_rate_pct: {type: REAL, description: "100 * complaints / orders."}
+
+  production_batches:
+    description: Production batches with the component supplier used for each.
+    owner: Quality Engineering
+    columns:
+      batch_id: {type: TEXT, description: "Batch identifier, for example B-2026-09B."}
+      product_id: {type: TEXT, description: "Product produced."}
+      produced_date: {type: TEXT, description: "Production date, ISO format."}
+      supplier: {type: TEXT, description: "Supplier of the key component."}
+      units_produced: {type: INTEGER, description: "Units in the batch."}
+
+  revenue_monthly:
+    description: Monthly revenue, refunds and margin per product.
+    owner: Finance
+    columns:
+      month: {type: TEXT, description: "Calendar month, YYYY-MM."}
+      product_id: {type: TEXT, description: "Product code."}
+      gross_revenue: {type: REAL, description: "Revenue before refunds, USD."}
+      refunds: {type: REAL, description: "Refunds issued for severity 2+ complaints, USD."}
+      net_revenue: {type: REAL, description: "gross_revenue minus refunds, USD."}
+      gross_margin_pct: {type: REAL, description: "Margin on net revenue after cost of goods."}
+
+  legacy_complaint_stats:
+    description: DEPRECATED. Stale complaints-per-1000-units snapshot with a different metric definition.
+    owner: Customer Support Analytics
+    deprecated: true
+    superseded_by: complaints_monthly
+    columns:
+      month: {type: TEXT, description: "Calendar month, YYYY-MM (stops at 2026-06)."}
+      product_id: {type: TEXT, description: "Product code."}
+      complaints_per_1000_units: {type: REAL, description: "Legacy metric; not comparable with complaint_rate_pct."}
+
+doc_sources:
+  product_faq:
+    tier: general
+    description: Public product FAQs.
+    linked_tables: [products]
+  company_policies:
+    tier: general
+    description: Warranty, returns and complaint-handling policies.
+    linked_tables: [complaints]
+  support_digests:
+    tier: support
+    description: Monthly complaint digests written by Customer Support.
+    linked_tables: [complaints_monthly]
+  support_tickets:
+    tier: support
+    description: Individual customer complaint tickets.
+    linked_tables: [complaints]
+  carrier_notices:
+    tier: support
+    description: Logistics and carrier notices that affect delivery.
+    linked_tables: [complaints]
+  quality_reports:
+    tier: quality
+    description: Quality inspections, supplier memos and incident reports.
+    linked_tables: [production_batches, complaints]
+  finance_reports:
+    tier: finance
+    description: Monthly finance commentary and margin analysis.
+    linked_tables: [revenue_monthly, complaints_monthly]
+  legacy_stats_notes:
+    tier: general
+    deprecated: true
+    description: DEPRECATED notes describing the legacy complaint statistics.
+    linked_tables: [legacy_complaint_stats]
