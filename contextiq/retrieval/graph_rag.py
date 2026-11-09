@@ -1,3 +1,4 @@
+
 """Governed, graph-based retrieval.
 
 question -> terms/products/periods -> graph walk (drops deprecated) -> per-source permission check
@@ -61,17 +62,30 @@ class GovernedRetriever:
         if periods:
             time_filter = {"$or": [{"month": {"$in": periods}}, {"month": "all"}]}
         candidates: list[Evidence] = []
+        discovered_products: set[str] = set()
+
         for source_id in plan.doc_sources:
             allowed, reason = self.policy.can_read_source(role, source_id)
             self.audit.record(role, "retrieve_source", source_id, "allow" if allowed else "deny", reason)
             if not allowed:
                 bundle.withheld.append({"kind": "source", "id": source_id, "reason": reason})
                 continue
-            hits = self.store.query(question, n=self.per_source_n,
-                                    where=and_filters({"source_id": source_id}, time_filter))
+
+            hits = self.store.query(
+                question,
+                n=self.per_source_n,
+                where=and_filters({"source_id": source_id}, time_filter)
+            )
             scored = []
+
             for h in hits:
                 m = h.metadata
+
+                # Discover products only from sources this role is allowed to read.
+                for product_id in m.get("product_ids", "").strip("|").split("|"):
+                    if product_id in self.meta.products:
+                        discovered_products.add(product_id)
+
                 boosts: dict[str, float] = {}
                 if plan.products and any(f"|{p}|" in m["product_ids"] for p in plan.products):
                     boosts["product"] = PRODUCT_BOOST
@@ -79,14 +93,29 @@ class GovernedRetriever:
                     boosts["direct_source"] = DIRECT_SOURCE_BOOST
                 if periods and m["month"] in periods:
                     boosts["period"] = PERIOD_BOOST
-                scored.append(Evidence(h.chunk_id, m["doc_id"], m["title"], source_id, m["tier"], m["month"],
-                                       round(h.similarity + sum(boosts.values()), 4), h.similarity,
-                                       h.text, boosts))
+
+                scored.append(Evidence(
+                    h.chunk_id,
+                    m["doc_id"],
+                    m["title"],
+                    source_id,
+                    m["tier"],
+                    m["month"],
+                    round(h.similarity + sum(boosts.values()), 4),
+                    h.similarity,
+                    h.text,
+                    boosts
+                ))
+
             scored.sort(key=lambda e: -e.score)
-            candidates.extend(scored[: self.per_source_cap])   # per-source cap
+            candidates.extend(scored[:self.per_source_cap])
 
         candidates.sort(key=lambda e: -e.score)
         bundle.evidence = candidates[:top_k]
+
+        # Keep explicitly requested products and add products found in permitted sources.
+        bundle.products = list(plan.products) if plan.products else sorted(discovered_products)
+
         bundle.violations = find_violations(bundle.evidence, role, self.meta, self.policy)
         return bundle
 

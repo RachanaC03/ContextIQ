@@ -397,7 +397,7 @@ def _build_documents(meta, stats, complaints, revenue, n_orders) -> list[dict]:
         f"through thermal-cycling tests and a majority failed, while samples from earlier batches passed. The "
         f"failures point to the heating elements from {FAULTY_SUPPLIER}. The Robo Vac R2 complaints are "
         f"unrelated to quality: they come from carrier delays.",
-        month="2026-10", product_ids=["P-104", "P-107"], doc_type="rca"))
+        month="2026-10", product_ids=["P-104"], doc_type="rca"))
 
     # ---- finance
     for mi, month in enumerate(MONTHS):
