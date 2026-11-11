@@ -1,5 +1,6 @@
 import streamlit as st
 
+from contextiq.answering.generator import generate_answer
 from contextiq.config import Settings
 from contextiq.engine import ContextEngine
 
@@ -75,6 +76,28 @@ if st.button("Retrieve context", type="primary"):
                 )
 
             st.success("Context retrieval completed.")
+            answer = generate_answer(bundle)
+
+            st.markdown("### Generated answer report")
+
+            st.write(answer["summary"])
+
+            if answer["findings"]:
+                for finding in answer["findings"]:
+                    st.markdown(
+                        f"**{finding['citation']} {finding['title']}**"
+                    )
+                    st.write(finding["text"])
+                    st.caption(
+                        f"Source: {finding['source_id']} | "
+                        f"Period: {finding['period']}"
+                    )
+            else:
+                st.info("No permitted evidence is available.")
+
+            with st.expander("Report limitations"):
+                for limitation in answer["limitations"]:
+                    st.write("- ", limitation)
 
             st.markdown("### Retrieval summary")
 
