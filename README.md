@@ -1,56 +1,61 @@
 # ContextIQ — Governed Business Context & Retrieval Platform
 
-ContextIQ is a Python-based governed retrieval prototype that helps business applications retrieve relevant information while respecting role-based access policies, business metadata, data lineage and source-level permissions.
+ContextIQ is a Python-based governed retrieval prototype that helps business applications retrieve relevant information while respecting role-based access policies, business metadata, data lineage, and source-level permissions.
 
-Instead of relying on unrestricted vector search, ContextIQ combines a context graph, metadata-aware retrieval, access control and SQL validation to produce structured, permission-aware business context.
+Instead of relying only on unrestricted vector search, ContextIQ combines a context graph, metadata-aware retrieval, access control, and SQL validation to produce structured business context.
 
-**Current status:** Working prototype with synthetic business data, CLI, Streamlit dashboard, governed graph-based retrieval, plain RAG baseline, governed SQL execution and audit logging.
+**Current status:** Working prototype using synthetic business data, governed retrieval, SQL validation, a Streamlit dashboard, and an evidence-grounded answer-reporting module.
 
-**Test status:** 122 automated tests passing (`pytest -q`).
+**Automated tests:** 124 passing.
 
 ## Features
 
 - **Governed graph-based retrieval:** Uses business metadata and context relationships to identify relevant sources.
 - **Role-based access control:** Supports four roles with different evidence permissions.
-- **Context graph:** Connects business terms, authoritative tables, upstream data and related documents.
-- **Temporal filtering:** Resolves business time references such as "last month".
-- **Metadata-aware retrieval:** Uses source-specific vector search, filtering, scoring and ranking.
+- **Context graph:** Connects business terms, authoritative tables, upstream data, and related documents.
+- **Metadata-aware retrieval:** Uses source-specific vector search, filtering, ranking, and evidence limits.
 - **Deprecated-source handling:** Excludes deprecated sources from governed retrieval.
 - **Governed SQL execution:** Validates SQL queries against table and column permissions.
 - **Audit logging:** Records governance and query activity.
-- **Streamlit dashboard:** Allows users to select a role, submit business questions and inspect retrieved evidence, schemas and lineage.
-- **Plain RAG baseline:** Provides an unrestricted retrieval comparison path for experimentation.
+- **Plain RAG baseline:** Provides a retrieval comparison path for experimentation.
+- **Evidence-grounded answer reports:** Organizes retrieved evidence into structured findings with numbered citations, resolved context, and limitations.
+- **Interactive dashboard:** Displays retrieval results, evidence, schemas, governance information, and generated reports.
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    U[User / Business Question] --> I[CLI or Streamlit Dashboard]
-    I --> E[ContextEngine]
+The main retrieval workflow is:
 
-    E --> P[Query and Context Planning]
-    P --> G[Business Metadata and Context Graph]
-    G --> D[Source Discovery]
-
-    D --> A[Role-Based Access Policy]
-    A -->|Permitted sources| V[Time-Filtered Vector Search]
-    A -->|Denied sources| W[Withheld Source Records]
-
-    V --> R[Graph-Aware Ranking and Source Caps]
-    R --> B[ContextBundle]
-    B --> O[Evidence, Schemas, Definitions and Lineage]
-
-    E --> S[Governed SQL Execution]
-    S --> SG[SQLGlot Query Guard]
-    SG --> DB[Read-Only SQLite with Authorizer]
-    DB --> Q[Query Results]
-
-    A --> L[Audit Log]
-    SG --> L
-    DB --> L
+```text
+Business question
+       |
+       v
+Question and context analysis
+       |
+       v
+Context graph and metadata lookup
+       |
+       v
+Source-level permission checks
+       |
+       v
+Time-filtered vector retrieval
+       |
+       v
+Graph-aware ranking and evidence limits
+       |
+       v
+Structured ContextBundle
+       |
+       v
+Evidence-grounded answer report
+       |
+       v
+Streamlit dashboard
 ```
 
-## Technology stack
+The SQL workflow is separate and includes query parsing, permission validation, read-only execution, and database-level authorization.
+
+## Technology Stack
 
 | Technology | Purpose |
 |---|---|
@@ -60,50 +65,47 @@ flowchart TD
 | SQLGlot | SQL parsing and validation |
 | SQLite | Synthetic business data and governed SQL execution |
 | Streamlit | Interactive dashboard |
-| PyYAML | Metadata configuration |
+| PyYAML | Metadata and access-policy configuration |
 | Pytest | Automated testing |
 | Sentence Transformers | Optional semantic embeddings |
 
-## Project structure
+## Project Structure
 
 ```text
 ContextIQ/
-│
 ├── app.py
 ├── contextiq/
+│   ├── answering/
+│   │   ├── __init__.py
+│   │   └── generator.py
 │   ├── context/
-│   │   ├── ingest.py
-│   │   ├── embedders.py
-│   │   ├── graph.py
-│   │   └── store.py
-│   │
-│   ├── retrieval/
-│   │   ├── graph_rag.py
-│   │   ├── plain_rag.py
-│   │   └── ...
-│   │
 │   ├── governance/
-│   │   ├── policy.py
-│   │   ├── sql_guard.py
-│   │   ├── executor.py
-│   │   └── audit.py
-│   │
+│   ├── retrieval/
 │   ├── synth/
+│   ├── config.py
 │   ├── engine.py
-│   └── ...
-│
+│   ├── metadata.py
+│   └── cli.py
 ├── data/
-│   ├── context/
-│   └── generated/
-│
 ├── tests/
-├── requirements.txt
-├── pytest.ini
+│   ├── test_answering.py
+│   ├── test_audit.py
+│   ├── test_data.py
+│   ├── test_executor.py
+│   ├── test_graph.py
+│   ├── test_metadata.py
+│   ├── test_policy.py
+│   ├── test_retrieval.py
+│   ├── test_sql_guard.py
+│   └── test_temporal.py
 ├── .env.example
-└── README.md
+├── .gitignore
+├── README.md
+├── requirements.txt
+└── pytest.ini
 ```
 
-## Getting started
+## Getting Started
 
 ### 1. Clone the repository
 
@@ -114,53 +116,47 @@ cd ContextIQ
 
 ### 2. Create and activate a virtual environment
 
-**Windows CMD:**
+Windows CMD:
 
 ```cmd
 python -m venv .venv
 .venv\Scripts\activate
 ```
 
-**macOS / Linux:**
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-```
-
 ### 3. Install dependencies
 
-```bash
+```cmd
 pip install -r requirements.txt
 ```
 
 ### 4. Generate synthetic business data
 
-```bash
+```cmd
 python -m contextiq generate
+
 ```
 
-This generates synthetic tables, business documents and ground-truth data.
+This generates synthetic business tables, documents, and ground-truth data.
 
 ### 5. Build the retrieval index
 
-```bash
+```cmd
 python -m contextiq index
 ```
 
-This processes documents, creates chunks and indexes them in ChromaDB.
+This processes documents, creates chunks, and indexes them in ChromaDB.
 
 ### 6. Run automated tests
 
-```bash
+```cmd
 pytest -q
 ```
 
-**Latest verified result:** 122 passed.
+**Latest verified result: 124 passed.**
 
 ### 7. Run the Streamlit dashboard
 
-```bash
+```cmd
 streamlit run app.py
 ```
 
@@ -168,7 +164,7 @@ Open `http://localhost:8501` in your browser.
 
 ## Using ContextIQ
 
-### Supported roles
+### Supported Roles
 
 | Role | Intended access |
 |---|---|
@@ -177,76 +173,48 @@ Open `http://localhost:8501` in your browser.
 | `finance_manager` | Financial and business information |
 | `executive` | Executive-level business information |
 
-Role policies are configured in `data/context/roles.yaml`.
+Role policies are configured in the metadata configuration files.
 
-### Governed retrieval
+### Example Business Question
 
-Example question:
+"Why did customer complaints increase last month, which products were affected, and what should we do?"
 
-```text
-Why did customer complaints increase last month,
-which products were affected, and what should we do?
-```
+The governed retrieval workflow identifies relevant periods, products, business terms, and permitted sources before returning evidence.
 
-Run the query with different roles:
+### Evidence-Grounded Answer Reports
 
-```cmd
-python -m contextiq ask "Why did customer complaints increase last month, which products were affected, and what should we do?" --role support_analyst
-```
+The answering module organizes retrieved evidence into:
 
-```cmd
-python -m contextiq ask "Why did customer complaints increase last month, which products were affected, and what should we do?" --role finance_manager
-```
+- A retrieval summary.
+- Numbered evidence citations.
+- Source and document references.
+- Relevant periods and products.
+- Report limitations.
+- Access-policy notice.
 
-The governed retrieval path applies source permissions before returning evidence.
+This module currently creates a structured evidence report. It does not yet generate complete LLM-based business answers or independently establish root causes.
 
-### Plain RAG baseline
+### Plain RAG Baseline
 
-```cmd
-python -m contextiq ask "Why did customer complaints increase last month, which products were affected, and what should we do?" --plain --role finance_manager
-```
+ContextIQ includes a plain retrieval baseline for comparing retrieval behaviour.
 
-This provides an unrestricted baseline for comparing retrieval behavior. It is intended for controlled experimentation, not as a secure alternative to governed retrieval.
+It is intended for controlled experimentation, not as a secure alternative to governed retrieval.
 
-### Inspect the grounded context
+### Governed SQL
 
-```cmd
-python -m contextiq ask "Why did customer complaints increase last month, which products were affected, and what should we do?" --role support_analyst --prompt
-```
-
-This displays the structured context that could be supplied to a language model. The current prototype retrieves context; it does not yet generate complete LLM-based business answers.
-
-## Governed SQL
-
-ContextIQ includes a SQL validation and execution path.
-
-Example permitted query:
-
-```cmd
-python -m contextiq sql "SELECT product_id, complaint_rate_pct FROM complaints_monthly WHERE month='2026-10' ORDER BY 2 DESC" --role support_analyst
-```
-
-Example restricted query:
-
-```cmd
-python -m contextiq sql "SELECT unit_price FROM orders" --role support_analyst
-```
-
-The SQL path includes:
+The SQL execution workflow includes:
 
 1. SQL parsing and validation using SQLGlot.
 2. Single-SELECT query restrictions.
 3. Table and column permission checks.
 4. Read-only SQLite execution.
-5. A SQLite authorizer as an additional enforcement layer.
+5. SQLite authorizer as an additional enforcement layer.
 
-Inspect audit information:
+### Audit Information
 
-```cmd
-python -m contextiq audit
-```
+Audit logging records relevant governance and query activity.
 
-## Synthetic business scenario
+## Synthetic Business Scenario
 
 ContextIQ uses a fictional appliance company called **Hearthline**.
 
@@ -255,21 +223,29 @@ The generated dataset contains:
 - 20,000 synthetic orders.
 - 380 synthetic complaints.
 - 57 business documents.
-- Eight products.
-- Four information access tiers: general, support, quality and finance.
-- Business metadata, lineage information and ground-truth data.
+- 8 products.
+- Four information access tiers: general, support, quality, and finance.
+- Business metadata, lineage information, and ground-truth data.
 
-The dataset includes deliberately planted scenarios:
+### Planted Scenarios
 
-- **P-104 AeroBrew Pro:** A faulty heating element associated with production batch `B-2026-09B` leads to an increase in October complaints.
-- **P-107 Robo Vac R2:** A carrier change contributes to delivery-delay complaints.
-- **Deprecated data source:** `legacy_complaint_stats` contains stale information and a different metric definition.
+**P-104 — AeroBrew Pro**
 
-These scenarios provide test cases for product discovery, temporal retrieval, source selection and deprecated-source handling.
+A faulty heating element associated with production batch `B-2026-09B` and supplier Zenvolt Components is linked to an increase in October complaints.
 
-All business data is synthetic; no real customer information is used.
+**P-107 — Robo Vac R2**
 
-## Design decisions
+A carrier change contributes to delivery-delay complaints.
+
+**Deprecated source — `legacy_complaint_stats`**
+
+Contains stale information and a different metric definition.
+
+These scenarios provide test cases for product discovery, temporal retrieval, source selection, and deprecated-source handling.
+
+All generated data is synthetic. No real customer information is used.
+
+## Design Decisions
 
 - Enforce access policies in application logic rather than relying only on prompt instructions.
 - Check permissions at the source level before retrieving evidence.
@@ -277,56 +253,51 @@ All business data is synthetic; no real customer information is used.
 - Exclude deprecated sources from governed retrieval.
 - Apply time filters and per-source retrieval limits to reduce irrelevant or repetitive evidence.
 - Apply SQL validation and database-level authorization as separate enforcement layers.
-- Maintain a plain RAG baseline to compare retrieval behavior against the governed approach.
+- Maintain a plain RAG baseline to compare retrieval behaviour.
+- Keep answer reporting grounded in retrieved evidence and expose limitations instead of inventing unsupported conclusions.
 
-## Current limitations
+## Embedding Configuration
+
+ContextIQ supports configurable embedding selection.
+
+The default `auto` setting attempts to use Sentence Transformers and falls back to a deterministic hashing embedder when the optional dependency is unavailable.
+
+The hashing embedder is useful for local testing but is not equivalent to a semantic embedding model.
+
+The Sentence Transformers MiniLM path is implemented but has not yet been fully validated in this environment.
+
+Refer to `.env.example` and the configuration code for embedding settings.
+
+## Current Limitations
 
 - This is a retrieval prototype, not a complete autonomous AI agent.
-- No LLM-based answer generation or agent orchestration is currently implemented.
-- The default hashing embedder is a deterministic fallback and is largely lexical in behavior.
-- The Sentence Transformers MiniLM embedding path is implemented but has not yet been fully validated in this environment.
+- LLM-based answer generation and agent orchestration are not yet implemented.
+- The current answer generator produces structured evidence reports, not full natural-language business recommendations.
+- The default hashing embedder is a deterministic fallback and is largely lexical in behaviour.
+- The Sentence Transformers MiniLM embedding path requires further validation.
 - Business-term linking currently relies on glossary terms and synonyms.
-- SQLite is supported; PostgreSQL integration is not implemented.
-- Evaluation with a larger benchmark, RAGAS and custom faithfulness/citation metrics remains future work.
+- SQLite is currently supported; PostgreSQL integration is not implemented.
+- Evaluation using a larger benchmark, RAGAS, and custom faithfulness metrics requires future work.
 - The prototype has not been deployed as a production service or independently security-audited.
-
-### Embedding configuration
-
-The default `EMBEDDER=auto` setting attempts to use Sentence Transformers and falls back to the hashing embedder when unavailable.
-
-To use the hashing embedder explicitly:
-
-**Windows CMD:**
-
-```cmd
-set EMBEDDER=hash
-```
-
-To try the Sentence Transformers model:
-
-```cmd
-pip install sentence-transformers
-set EMBEDDER=st
-python -m contextiq index
-```
-
-After testing, return to automatic selection with:
-
-```cmd
-set EMBEDDER=auto
-```
-
-These environment variables apply to the current CMD session.
 
 ## Roadmap
 
-| Stage | Planned work |
-|---|---|
-| Current | Synthetic data, context graph, governed retrieval, SQL guard, audit logging, CLI, Streamlit dashboard and automated tests |
-| Next | LLM integration, structured answer generation and LangGraph-based agent workflows |
-| Future | FastAPI service, approval workflows and structured citations |
-| Future | Retrieval evaluation, tracing, faithfulness and citation-accuracy benchmarks |
-| Future | Optional MCP integration, deployment and demonstration video |
+### Planned
+
+- LLM integration and grounded natural-language answer generation.
+- Structured business findings and qualified recommendations.
+- LangGraph-based agent workflows.
+- Retrieval evaluation and benchmarking.
+- RAGAS and custom faithfulness evaluation.
+- Improved tracing and observability.
+- Additional data-source integrations.
+
+### Future Possibilities
+
+- FastAPI service.
+- Optional MCP integration.
+- Deployment and demonstration video.
+- Expanded database support and evaluation datasets.
 
 ## Author
 
@@ -334,10 +305,8 @@ These environment variables apply to the current CMD session.
 
 B.Tech — Artificial Intelligence and Machine Learning
 
-Interested in Python, Artificial Intelligence, Machine Learning, NLP and Generative AI.
+Interested in Python, Artificial Intelligence, Machine Learning, NLP, and Generative AI.
 
-GitHub: https://github.com/RachanaC03
+[GitHub: RachanaC03](https://github.com/RachanaC03)
 
----
-
-*ContextIQ is an independently developed portfolio project exploring governed retrieval, context engineering and access-aware business intelligence.*
+ContextIQ is an independently developed portfolio project exploring governed retrieval, metadata engineering, and access-aware business intelligence.
