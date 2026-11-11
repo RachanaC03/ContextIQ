@@ -82,6 +82,30 @@ if st.button("Retrieve context", type="primary"):
 
             st.write(answer["summary"])
 
+            st.markdown("#### Key observations")
+
+            if answer["key_observations"]:
+                for observation in answer["key_observations"]:
+                    st.write(
+                        f"{observation['citation']} "
+                        f"{observation['text']}"
+                    )
+            else:
+                st.info("No key observations are available.")
+
+            st.markdown("#### Affected products")
+
+            if answer["affected_products"]:
+                for product in answer["affected_products"]:
+                    citations = ", ".join(product["citations"])
+                    st.write(
+                        f"**{product['product']}** "
+                        f"(Evidence: {citations})"
+                    )
+            else:
+                st.info("No affected products were confirmed by the retrieved evidence.")
+
+
             if answer["findings"]:
                 for finding in answer["findings"]:
                     st.markdown(

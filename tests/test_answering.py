@@ -36,6 +36,15 @@ def test_generate_answer_with_evidence():
     )
     assert result["resolved_context"]["products"] == ["P-104"]
 
+    assert len(result["key_observations"]) == 1
+    assert result["key_observations"][0]["citation"] == "[1]"
+    assert result["key_observations"][0]["text"] == (
+        "P-104 complaints increased during October."
+    )
+    assert result["affected_products"] == [
+        {"product": "P-104", "citations": ["[1]"]}
+    ]
+
 
 def test_generate_answer_without_evidence():
     bundle = ContextBundle(
@@ -50,3 +59,5 @@ def test_generate_answer_without_evidence():
     assert result["findings"] == []
     assert "cannot be produced" in result["summary"]
     assert len(result["limitations"]) == 3
+    assert result["key_observations"] == []
+    assert result["affected_products"] == []
