@@ -1,12 +1,13 @@
+
 # ContextIQ — Governed Business Context & Retrieval Platform
 
 ContextIQ is a Python-based governed retrieval prototype that helps business applications retrieve relevant information while respecting role-based access policies, business metadata, data lineage, and source-level permissions.
 
-Instead of relying only on unrestricted vector search, ContextIQ combines a context graph, metadata-aware retrieval, access control, and SQL validation to produce structured business context.
+Instead of relying only on unrestricted vector search, ContextIQ combines a context graph, metadata-aware retrieval, access control, SQL validation, and local LLM answer generation to produce structured business context and evidence-grounded answers.
 
-**Current status:** Working prototype using synthetic business data, governed retrieval, SQL validation, a Streamlit dashboard, and an evidence-grounded answer-reporting module.
+**Current status:** Working portfolio prototype using synthetic business data, governed retrieval, SQL validation, a Streamlit dashboard, structured evidence reports, and a local LLM answer workflow orchestrated with LangGraph.
 
-**Automated tests:** 124 passing.
+**Automated tests:** 127 passing.
 
 ## Features
 
@@ -15,15 +16,18 @@ Instead of relying only on unrestricted vector search, ContextIQ combines a cont
 - **Context graph:** Connects business terms, authoritative tables, upstream data, and related documents.
 - **Metadata-aware retrieval:** Uses source-specific vector search, filtering, ranking, and evidence limits.
 - **Deprecated-source handling:** Excludes deprecated sources from governed retrieval.
+- **Temporal retrieval:** Applies relevant time filters to business questions.
 - **Governed SQL execution:** Validates SQL queries against table and column permissions.
 - **Audit logging:** Records governance and query activity.
 - **Plain RAG baseline:** Provides a retrieval comparison path for experimentation.
 - **Evidence-grounded answer reports:** Organizes retrieved evidence into structured findings with numbered citations, resolved context, and limitations.
+- **Local LLM integration:** Uses Ollama and the Qwen2.5 1.5B model to generate natural-language answers.
+- **LangGraph workflow:** Orchestrates retrieval, conditional answer generation, and citation-reference validation.
 - **Interactive dashboard:** Displays retrieval results, evidence, schemas, governance information, and generated reports.
 
 ## Architecture
 
-The main retrieval workflow is:
+### Governed Retrieval Workflow
 
 ```text
 Business question
@@ -45,12 +49,32 @@ Graph-aware ranking and evidence limits
        |
        v
 Structured ContextBundle
+```
+
+### Local LLM Answer Workflow
+
+```text
+Business question
        |
        v
-Evidence-grounded answer report
+LangGraph workflow
        |
        v
-Streamlit dashboard
+Governed evidence retrieval
+       |
+       v
+Check for permitted evidence
+       |
+       +------ No evidence ------> Return no-evidence result
+       |
+       v
+Generate answer using local Ollama model
+       |
+       v
+Validate citation references
+       |
+       v
+Return answer and retrieved evidence
 ```
 
 The SQL workflow is separate and includes query parsing, permission validation, read-only execution, and database-level authorization.
@@ -66,6 +90,8 @@ The SQL workflow is separate and includes query parsing, permission validation, 
 | SQLite | Synthetic business data and governed SQL execution |
 | Streamlit | Interactive dashboard |
 | PyYAML | Metadata and access-policy configuration |
+| LangGraph | Orchestrates the local answer-generation workflow |
+| Ollama | Runs the local Qwen2.5 1.5B language model |
 | Pytest | Automated testing |
 | Sentence Transformers | Optional semantic embeddings |
 
@@ -75,6 +101,9 @@ The SQL workflow is separate and includes query parsing, permission validation, 
 ContextIQ/
 ├── app.py
 ├── contextiq/
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   └── workflow.py
 │   ├── answering/
 │   │   ├── __init__.py
 │   │   └── generator.py
@@ -88,6 +117,7 @@ ContextIQ/
 │   └── cli.py
 ├── data/
 ├── tests/
+│   ├── test_agent_workflow.py
 │   ├── test_answering.py
 │   ├── test_audit.py
 │   ├── test_data.py
@@ -133,7 +163,6 @@ pip install -r requirements.txt
 
 ```cmd
 python -m contextiq generate
-
 ```
 
 This generates synthetic business tables, documents, and ground-truth data.
@@ -152,7 +181,7 @@ This processes documents, creates chunks, and indexes them in ChromaDB.
 pytest -q
 ```
 
-**Latest verified result: 124 passed.**
+**Latest verified result: 127 passed.**
 
 ### 7. Run the Streamlit dashboard
 
@@ -192,7 +221,42 @@ The answering module organizes retrieved evidence into:
 - Report limitations.
 - Access-policy notice.
 
-This module currently creates a structured evidence report. It does not yet generate complete LLM-based business answers or independently establish root causes.
+### Local LLM Answer Workflow
+
+ContextIQ also includes a local LLM answer workflow orchestrated with LangGraph.
+
+It uses:
+
+- **Ollama** to run the language model locally.
+- **Qwen2.5 1.5B** as the default language model.
+- **LangGraph** to orchestrate retrieval, conditional generation, and validation.
+
+Install Ollama separately and make sure it is running.
+
+Download the model:
+
+```cmd
+ollama pull qwen2.5:1.5b
+```
+
+Generate an answer using the quality engineer role:
+
+```cmd
+python -m contextiq answer "Why did complaints increase in October?" --role quality_engineer
+```
+
+The workflow:
+
+1. Retrieves permitted evidence using ContextIQ's governed retrieval engine.
+2. Checks whether permitted evidence is available.
+3. Skips LLM generation when no permitted evidence is found.
+4. Generates a natural-language answer using the local Ollama model.
+5. Performs basic citation-reference validation.
+6. Returns the answer along with retrieved evidence.
+
+The model runs locally through Ollama. A hosted LLM API is not required.
+
+**Citation validation limitation:** Citation validation checks whether referenced evidence numbers exist in the retrieved results. It does not independently verify that every factual claim is supported by its cited source. Generated answers may still contain unsupported statements and require human review.
 
 ### Plain RAG Baseline
 
@@ -255,6 +319,7 @@ All generated data is synthetic. No real customer information is used.
 - Apply SQL validation and database-level authorization as separate enforcement layers.
 - Maintain a plain RAG baseline to compare retrieval behaviour.
 - Keep answer reporting grounded in retrieved evidence and expose limitations instead of inventing unsupported conclusions.
+- Use a local LLM to avoid requiring a hosted model API for answer generation.
 
 ## Embedding Configuration
 
@@ -264,15 +329,16 @@ The default `auto` setting attempts to use Sentence Transformers and falls back 
 
 The hashing embedder is useful for local testing but is not equivalent to a semantic embedding model.
 
-The Sentence Transformers MiniLM path is implemented but has not yet been fully validated in this environment.
+The Sentence Transformers MiniLM embedding path is implemented but has not yet been fully validated in this environment.
 
 Refer to `.env.example` and the configuration code for embedding settings.
 
 ## Current Limitations
 
-- This is a retrieval prototype, not a complete autonomous AI agent.
-- LLM-based answer generation and agent orchestration are not yet implemented.
-- The current answer generator produces structured evidence reports, not full natural-language business recommendations.
+- This is a retrieval and answer-generation prototype, not a complete autonomous AI agent.
+- The local LLM and LangGraph workflow is a portfolio prototype, not a production agent system.
+- Generated answers may contain unsupported statements and require human review.
+- Citation validation checks reference-number validity, not claim-level factual support.
 - The default hashing embedder is a deterministic fallback and is largely lexical in behaviour.
 - The Sentence Transformers MiniLM embedding path requires further validation.
 - Business-term linking currently relies on glossary terms and synonyms.
@@ -282,22 +348,15 @@ Refer to `.env.example` and the configuration code for embedding settings.
 
 ## Roadmap
 
-### Planned
-
-- LLM integration and grounded natural-language answer generation.
-- Structured business findings and qualified recommendations.
-- LangGraph-based agent workflows.
-- Retrieval evaluation and benchmarking.
-- RAGAS and custom faithfulness evaluation.
-- Improved tracing and observability.
-- Additional data-source integrations.
-
-### Future Possibilities
-
-- FastAPI service.
-- Optional MCP integration.
-- Deployment and demonstration video.
-- Expanded database support and evaluation datasets.
+- Improve answer quality and evaluate factual grounding.
+- Add claim-level evidence verification.
+- Expand workflow testing and reliability.
+- Perform retrieval evaluation and benchmarking.
+- Explore RAGAS and custom faithfulness evaluation.
+- Improve tracing and observability.
+- Add additional data-source integrations.
+- Explore a FastAPI service and optional MCP integration.
+- Prepare a public demonstration video.
 
 ## Author
 
@@ -309,4 +368,4 @@ Interested in Python, Artificial Intelligence, Machine Learning, NLP, and Genera
 
 [GitHub: RachanaC03](https://github.com/RachanaC03)
 
-ContextIQ is an independently developed portfolio project exploring governed retrieval, metadata engineering, and access-aware business intelligence.
+ContextIQ is an independently developed portfolio project exploring governed retrieval, metadata engineering, access-aware business intelligence, and local LLM workflows.
